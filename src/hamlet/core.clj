@@ -50,3 +50,27 @@
 ;;(spit "./resources/processed.txt" processed-text)
 
 ;; use read-string and spit to read and write clojure data structures to a file.
+
+(def hard-to-regex-directions #{"Exit" "Exeunt" "Cock crows" "Enter Ghost" "Exit Ghost" "Re-enter Ghost"})
+
+(defn parse-line [line]
+  (cond 
+    (re-matches title line)  {:text line :indent ""         :title "Hamlet"}
+    (re-matches acts line)   {:text line :indent "  "       :act line :scene nil :direction nil :character :nil}
+    (re-matches scenes line) {:text line :indent "    "     :scene (first (clojure.string/split line #"\.")) :direction nil :character nil}
+    (or (and (re-matches names line) (re-matches not-names line)) (contains? hard-to-regex-directions line))
+                             {:text line :indent "      "   :direction line} 
+    (re-matches names line)  {:text line :indent "        " :character line}
+    :else                    {:text line :indent "          "} ))
+
+(defn parse-fill [filled line]
+  (conj filled (merge (last filled) (parse-line line))))
+
+(defn parse [lines]
+  (reduce parse-fill [] lines))
+
+(println "****")
+(println (join "\n" (map #(str (:indent %) (:text %)) (take 16 (parse (file-line-seq "./resources/hamlet.txt"))))))
+(println "****")
+
+
