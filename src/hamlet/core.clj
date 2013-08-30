@@ -1,12 +1,21 @@
 (ns hamlet.core
   (:use [clojure.java.io :only [reader]])
-  (:use [clojure.string :only [join]]))
+  (:use [clojure.string :only [join blank?]]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def force-update true)
 
 (defn file-line-seq [filename]
   (with-open [r (reader filename)]
     (doall (line-seq r))))
+
+(defn file-exists [filename]
+  (let [f (java.io.File. filename)]
+    (println (.getAbsolutePath f))
+    (.exists f)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def title #".*The Tragedy of Hamlet.*")
 (def names #".*[A-Z]{2}.*")
@@ -14,63 +23,71 @@
 (def scenes #".*\bSCENE\b.*")
 (def acts #".*\bACT\b.*")
 
-(defn to-field [n line]
-  (concat (take n (repeat "  ")) [line] (take (- 5 n) (repeat "  "))))
-
-(defn split [line]
-  (cond
-    (re-matches title line)  (to-field 0 line)
-    (re-matches acts line)   (to-field 1 line)
-    (re-matches scenes line) (to-field 2 line)
-    (and (re-matches names line) (re-matches not-names line))
-                             (to-field 3 line)
-    (re-matches names line)  (to-field 4 line)
-    :else                    (to-field 5 line)
-  ))
-
-(defn file-exists [filename]
-  (let [f (java.io.File. filename)]
-    (println (.getAbsolutePath f))
-    (.exists f)))
-
-(let [f-name "./resources/processed.txt"]
-  (if (file-exists f-name)
-    (do
-      (def processed-text (read-string (slurp f-name)))
-      (println "Read from file."))
-    (do
-      (def processed-text (map split (file-line-seq "./resources/hamlet.txt")))
-      (spit f-name (pr-str processed-text))
-      (println "Re-processed from original file."))))
-      
-(println (str "Sample: \n" (join "\n" (map (partial apply str) (take 16 processed-text)))))
- 
-(println (str "Lines: " (count (filter #(not (clojure.string/blank? (nth % 5))) processed-text))))
- 
-;;(spit "./resources/processed.txt" processed-text)
-
-;; use read-string and spit to read and write clojure data structures to a file.
-
 (def hard-to-regex-directions #{"Exit" "Exeunt" "Cock crows" "Enter Ghost" "Exit Ghost" "Re-enter Ghost"})
+
+(defn mk-line [line more]
+  (merge {:meta {} :text line :line-count 0} more))
 
 (defn parse-line [line]
   (cond 
-    (re-matches title line)  {:text line :indent ""         :title "Hamlet"}
-    (re-matches acts line)   {:text line :indent "  "       :act line :scene nil :direction nil :character :nil}
-    (re-matches scenes line) {:text line :indent "    "     :scene (first (clojure.string/split line #"\.")) :direction nil :character nil}
+    (re-matches title line)  (mk-line line {:indent ""         :title "Hamlet"})
+    (re-matches acts line)   (mk-line line {:indent "  "       :act line :scene nil :direction nil :character :nil})
+    (re-matches scenes line) (mk-line line {:indent "    "     :scene (first (clojure.string/split line #"\.")) :direction nil :character nil :line-number 0})
     (or (and (re-matches names line) (re-matches not-names line)) (contains? hard-to-regex-directions line))
-                             {:text line :indent "      "   :direction line} 
-    (re-matches names line)  {:text line :indent "        " :character line}
-    :else                    {:text line :indent "          "} ))
+                             (mk-line line {:indent "      "   :direction line})
+    (re-matches names line)  (mk-line line {:indent "        " :character line})
+    (blank? line)            (mk-line line {:indent "          "})
+    :else                    (mk-line line {:indent "          " :line-count 1}) ))
 
 (defn parse-fill [filled line]
-  (conj filled (merge (last filled) (parse-line line))))
+  (let [prev (last filled)
+        this (parse-line line)
+        prev-line (if prev (:line-number prev) 0)
+	this-line (+ (:line-count this) prev-line)
+        this-no (if (= 0 (:line-count this)) nil this-line)] ;; (* (:line-count this) this-line)]
+    (conj filled (merge prev {:line-number this-line :ln this-no} this))))
 
 (defn parse [lines]
   (reduce parse-fill [] lines))
 
-(println "****")
-(println (join "\n" (map #(str (:indent %) (:text %)) (take 16 (parse (file-line-seq "./resources/hamlet.txt"))))))
-(println "****")
+(defn load-parsed []
+  (let [f-name "./resources/parsed.txt"]
+    (if (and (not force-update) (file-exists f-name))
+      (do
+        (def parsed-text (read-string (slurp f-name)))
+        (println "Read from file."))
+      (do
+        (def parsed-text (parse (file-line-seq "./resources/hamlet.txt")))
+        (spit f-name (pr-str parsed-text))
+        (println "Re-processed from original file.")))))
+
+(load-parsed)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn find-line [act scene line]
+  (count
+    (take-while
+      #(not (and (= act (:act %))
+                 (= scene (:scene %))
+                 (= line (or (:ln %) 0))
+             ))
+      parsed-text)))
+
+(def reset-colour "\033[0m")
+(defn green [text] (str "\033[1;32m" text reset-colour))
+
+(defn format-line [n line]
+  (let [colour-formatter (if (= (:ln line) n) green identity)]
+    (colour-formatter (str (:ln line) (:indent line) (:text line)))))
+
+(defn show-line [act scene line]
+  (let [n (find-line act scene line)]
+    (println
+      (join "\n"
+            (map #(format-line line %)
+                 (take 20 (drop (- n 10) parsed-text)))))))
+
+(show-line "ACT II" "SCENE II" 50)
 
 
