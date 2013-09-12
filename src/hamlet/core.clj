@@ -1,10 +1,13 @@
 (ns hamlet.core
   (:use [clojure.java.io :only [reader]])
-  (:use [clojure.string :only [join blank?]]))
+  (:use [clojure.string :only [join blank? split]])
+  (:use [clojure.data.json :only [read-str write-str]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def force-update true)
+(def force-update false)
+(def cut-filename "./resources/cut.txt")
+(def src-filename "./resources/hamlet.txt")
 
 (defn file-line-seq [filename]
   (with-open [r (reader filename)]
@@ -51,43 +54,131 @@
   (reduce parse-fill [] lines))
 
 (defn load-parsed []
-  (let [f-name "./resources/parsed.txt"]
-    (if (and (not force-update) (file-exists f-name))
-      (do
-        (def parsed-text (read-string (slurp f-name)))
-        (println "Read from file."))
-      (do
-        (def parsed-text (parse (file-line-seq "./resources/hamlet.txt")))
-        (spit f-name (pr-str parsed-text))
-        (println "Re-processed from original file.")))))
+  (if (and (not force-update) (file-exists cut-filename))
+    (do
+      (def parsed-text (read-string (slurp cut-filename)))
+      (println "Read from file."))
+    (do
+      (def parsed-text (parse (file-line-seq src-filename)))
+      (spit cut-filename (pr-str parsed-text))
+      (println "Re-processed from original file."))))
 
 (load-parsed)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn find-line [act scene line]
-  (count
-    (take-while
-      #(not (and (= act (:act %))
-                 (= scene (:scene %))
-                 (= line (or (:ln %) 0))
-             ))
-      parsed-text)))
+(def cut-text parsed-text)
 
-(def reset-colour "\033[0m")
-(defn green [text] (str "\033[1;32m" text reset-colour))
+(def css "<style>
+.ln {
+	width: 50px;
+	display: inline-block;
+}
 
-(defn format-line [n line]
-  (let [colour-formatter (if (= (:ln line) n) green identity)]
-    (colour-formatter (str (:ln line) (:indent line) (:text line)))))
+.line {
+	background-color: white;
+}
+.line:hover {
+	background-color: rgb(240, 240, 240);
+}
 
-(defn show-line [act scene line]
-  (let [n (find-line act scene line)]
-    (println
-      (join "\n"
-            (map #(format-line line %)
-                 (take 20 (drop (- n 10) parsed-text)))))))
+.text {
+	margin-left: 50px;
+	width: 500px;
+	display: inline-block;
+	color: rgb(0, 100, 0);
+	font-weight: bold;
+}
 
-(show-line "ACT II" "SCENE II" 50)
+.cut {
+	color: rgb(250, 200, 200);
+	font-weight: normal;
+}
 
+.meta {
+	margin-left: 0px;
+	margin-right: 50px;
+	width: 500px;
+	display: inline-block;
+}
+
+</style>")
+
+(def js "<script>
+
+function send(data) {
+	request = new XMLHttpRequest();
+	request.open(\"POST\", \"data.handler\", true);
+	request.setRequestHeader(\"data\", data);
+	request.send();
+}
+
+function cut(line_number) {
+	send(\"cut:\" + line_number);
+	el = document.getElementById(line_number);
+	el.classList.toggle(\"cut\");
+}
+
+</script>")
+
+(def head (str "<html><head>" css js "</head><body>"))
+(def tail "</body></html>")
+
+
+(defn proc-attrs [[k v]]
+  (str " " (name k) "=" \" v \"))
+
+(defn tag [tagname attrs & content]
+  (str "<" tagname (apply str (map proc-attrs attrs)) ">" (apply str content) "</" tagname ">"))
+
+(def span (partial tag "span"))
+(def div (partial tag "div"))
+(def input (partial tag "input"))
+
+(defn web-format [line id]
+  (let [line-type (if (:ln line) "text" "meta")
+        is-cut (if (-> line :meta :cut) " cut" "")
+	line-class (str line-type is-cut)]
+    (str (div {:class "line"}
+           (span {:class "ln"} (:ln line))
+           (span {:id id :class line-class} (:text line))
+           (input {:value "cut" :type "submit" :onclick (str "cut(" id ");") } "")
+         ))))
+
+(defn my-page []
+  (str head (apply str (map web-format cut-text (range))) tail))
+
+(defn cut-data [line]
+  (let [meta (:meta line)
+        cut? (:cut meta)
+        cut (not cut?)]
+    (assoc line :meta (assoc meta :cut cut))))
+
+(defn cut-line [line-number]
+  (def cut-text
+    (concat
+      (take line-number cut-text)
+      [(cut-data (nth cut-text line-number))]
+      (drop (inc line-number) cut-text)))
+  (spit cut-filename (pr-str cut-text)))
+
+(defn handle [data]
+  (cond
+    (.startsWith data "cut:")
+      (cut-line (read-string (last (split data #":"))))
+    :else
+      (println (str data "?"))))
+
+(defn handler [request]
+  (cond
+    (= (request :uri) "/")
+      {:status 200
+       :headers {"Content-Type" "text/html"}
+       :body (my-page)}
+    (= (request :uri) "/data.handler")
+      (do
+        (handle (-> request :headers (get "data")))
+        {:status 200})
+    :else
+      {:status 418}))
 
