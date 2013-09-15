@@ -53,8 +53,10 @@
 (defn parse [lines]
   (reduce parse-fill [] lines))
 
+(defn count-lines [text]
+  (println (count (filter #(and (:ln %) (not (:cut (:meta %)))) text))))
+
 (defn write-out [text]
-  (println (count (filter #(and (:ln %) (not (:cut (:meta %)))) text)))
   (spit cut-filename (pr-str text)))
 
 (defn load-parsed []
@@ -65,12 +67,13 @@
     (do
       (def parsed-text (parse (file-line-seq src-filename)))
       (write-out parsed-text)
-      (println "Re-processed from original file."))))
+      (println "Re-processed from original file.")))
+  (count-lines parsed-text))
 
 (load-parsed)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+ 
 (def cut-text parsed-text)
 
 (def css "<style>
@@ -106,6 +109,10 @@
 	display: inline-block;
 }
 
+.note {
+  width: 500px;
+}
+
 </style>")
 
 (def js "<script>
@@ -121,6 +128,11 @@ function cut(line_number) {
 	send(\"cut:\" + line_number);
 	el = document.getElementById(line_number);
 	el.classList.toggle(\"cut\");
+}
+
+function annotate(line_number) {
+	el = document.getElementById(\"note-\" + line_number);
+  send(\"note:\" + line_number + \":\" + el.value)
 }
 
 </script>")
@@ -142,11 +154,13 @@ function cut(line_number) {
 (defn web-format [line id]
   (let [line-type (if (:ln line) "text" "meta")
         is-cut (if (-> line :meta :cut) " cut" "")
-	line-class (str line-type is-cut)]
+        note (-> line :meta :note)
+        line-class (str line-type is-cut)]
     (str (div {:class "line"}
            (span {:class "ln"} (:ln line))
            (span {:id id :class line-class} (:text line))
            (input {:value "cut" :type "submit" :onclick (str "cut(" id ");") } "")
+           (input {:id (str "note-" id) :class "note" :value note :type "text" :onblur (str "annotate(" id ");") } "")
          ))))
 
 (defn my-page []
@@ -158,18 +172,37 @@ function cut(line_number) {
         cut (not cut?)]
     (assoc line :meta (assoc meta :cut cut))))
 
+(defn note-data [line note]
+  (let [meta (:meta line)]
+    (assoc line :meta (assoc meta :note note))))
+
 (defn cut-line [line-number]
   (def cut-text
     (concat
       (take line-number cut-text)
       [(cut-data (nth cut-text line-number))]
       (drop (inc line-number) cut-text)))
-  (write-out cut-text))
+  (write-out cut-text)
+  (count-lines parsed-text))
+
+(defn note-line [line-number note]
+  (def cut-text
+    (concat
+      (take line-number cut-text)
+      [(note-data (nth cut-text line-number) note)]
+      (drop (inc line-number) cut-text)))
+  (write-out cut-text)
+  (println (str "The note is: \"" note \")))
 
 (defn handle [data]
   (cond
     (.startsWith data "cut:")
       (cut-line (read-string (last (split data #":"))))
+    (.startsWith data "note:")
+      (let [bits (split data #":")
+            id (read-string (nth bits 1))
+            note (if (= (count bits) 3) (nth bits 2) "")]
+        (note-line id note))
     :else
       (println (str data "?"))))
 
