@@ -53,6 +53,10 @@
 (defn parse [lines]
   (reduce parse-fill [] lines))
 
+(defn write-out [text]
+  (println (count (filter #(and (:ln %) (not (:cut (:meta %)))) text)))
+  (spit cut-filename (pr-str text)))
+
 (defn load-parsed []
   (if (and (not force-update) (file-exists cut-filename))
     (do
@@ -60,7 +64,7 @@
       (println "Read from file."))
     (do
       (def parsed-text (parse (file-line-seq src-filename)))
-      (spit cut-filename (pr-str parsed-text))
+      (write-out parsed-text)
       (println "Re-processed from original file."))))
 
 (load-parsed)
@@ -160,7 +164,7 @@ function cut(line_number) {
       (take line-number cut-text)
       [(cut-data (nth cut-text line-number))]
       (drop (inc line-number) cut-text)))
-  (spit cut-filename (pr-str cut-text)))
+  (write-out cut-text))
 
 (defn handle [data]
   (cond
@@ -181,4 +185,3 @@ function cut(line_number) {
         {:status 200})
     :else
       {:status 418}))
-
