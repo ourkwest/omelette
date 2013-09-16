@@ -192,7 +192,7 @@ function annotate(line_number) {
       (drop (inc line-number) cut-text)))
   (write-out cut-text)
   (println (str (count-lines (take (inc line-number) cut-text))
-                " up to this point. Total: "
+                " up to the current line. Total: "
                 (count-lines cut-text))))
 
 (defn note-line [line-number note]
