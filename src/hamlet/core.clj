@@ -183,7 +183,7 @@ function annotate(line_number) {
       [(cut-data (nth cut-text line-number))]
       (drop (inc line-number) cut-text)))
   (write-out cut-text)
-  (count-lines parsed-text))
+  (count-lines cut-text))
 
 (defn note-line [line-number note]
   (def cut-text
