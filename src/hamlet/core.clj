@@ -54,7 +54,11 @@
   (reduce parse-fill [] lines))
 
 (defn count-lines [text]
-  (println (count (filter #(and (:ln %) (not (:cut (:meta %)))) text))))
+  (let [text-lines (filter :ln text)
+        total-count (count text-lines)
+        cut-count (count (filter #(:cut (:meta %)) text-lines))
+        uncut-count (- total-count cut-count)]
+    (str uncut-count " / " total-count " ("  (format "%.2f" (/ uncut-count total-count 0.01)) "%)")))
 
 (defn write-out [text]
   (spit cut-filename
@@ -72,7 +76,7 @@
       (def parsed-text (parse (file-line-seq src-filename)))
       (write-out parsed-text)
       (println "Re-processed from original file.")))
-  (count-lines parsed-text))
+  (println (str "Total: " (count-lines parsed-text))))
 
 (load-parsed)
 
@@ -187,7 +191,9 @@ function annotate(line_number) {
       [(cut-data (nth cut-text line-number))]
       (drop (inc line-number) cut-text)))
   (write-out cut-text)
-  (count-lines cut-text))
+  (println (str (count-lines (take (inc line-number) cut-text))
+                " up to this point. Total: "
+                (count-lines cut-text))))
 
 (defn note-line [line-number note]
   (def cut-text
