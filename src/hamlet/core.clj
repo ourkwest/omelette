@@ -57,7 +57,11 @@
   (println (count (filter #(and (:ln %) (not (:cut (:meta %)))) text))))
 
 (defn write-out [text]
-  (spit cut-filename (pr-str text)))
+  (spit cut-filename
+    (str
+      "("
+      (apply str (interpose "\n" (map pr-str text)))
+      ")")))
 
 (defn load-parsed []
   (if (and (not force-update) (file-exists cut-filename))
