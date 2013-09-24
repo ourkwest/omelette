@@ -39,6 +39,7 @@
     (or (and (re-matches names line) (re-matches not-names line)) (contains? hard-to-regex-directions line))
                              (mk-line line {:indent "      "   :direction line})
     (re-matches names line)  (mk-line line {:indent "        " :character line})
+    (= line "Ghost")         (mk-line line {:indent "        " :character "GHOST"})
     (blank? line)            (mk-line line {:indent "          "})
     :else                    (mk-line line {:indent "          " :line-count 1}) ))
 
