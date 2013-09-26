@@ -26,7 +26,8 @@
 (def scenes #".*\bSCENE\b.*")
 (def acts #".*\bACT\b.*")
 
-(def hard-to-regex-directions #{"Exit" "Exeunt" "Cock crows" "Enter Ghost" "Exit Ghost" "Re-enter Ghost" "Writing"})
+(def hard-to-regex-directions #{"Exit" "Exeunt" "Cock crows" "Enter Ghost" "Exit Ghost" "Re-enter Ghost"
+                                "Writing" "They swear"})
 
 (defn mk-line [line more]
   (merge {:meta {} :text line :line-count 0} more))
