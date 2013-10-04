@@ -120,7 +120,7 @@
 }
 
 .note {
-  width: 500px;
+  width: 450px;
 }
 
 </style>")
@@ -169,7 +169,7 @@ function annotate(line_number) {
     (str (div {:class "line"}
            (span {:class "ln"} (:ln line))
            (span {:id id :class line-class} (:text line))
-           (input {:value "cut" :type "submit" :onclick (str "cut(" id ");") } "")
+           (input {:value "cut" :type "submit" :tabindex id :onclick (str "cut(" id ");") } "")
            (input {:id (str "note-" id) :class "note" :value note :type "text" :onblur (str "annotate(" id ");") } "")
          ))))
 
