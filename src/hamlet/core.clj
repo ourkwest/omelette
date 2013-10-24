@@ -25,9 +25,12 @@
 (def not-names #".*[a-z]{1}.*")
 (def scenes #".*\bSCENE\b.*")
 (def acts #".*\bACT\b.*")
+(def inline-direction #".*\[.*")
 
 (def hard-to-regex-directions #{"Exit" "Exeunt" "Cock crows" "Enter Ghost" "Exit Ghost" "Re-enter Ghost"
-                                "Writing" "They swear"})
+                                "Writing" "They swear" "Reads"})
+
+(def not-actually-directions #{"this machine is to him, HAMLET.'" "and more strange return. 'HAMLET.'"})
 
 (defn mk-line [line more]
   (merge {:meta {} :text line :line-count 0} more))
@@ -37,9 +40,14 @@
     (re-matches title line)  (mk-line line {:indent ""         :title "Hamlet"})
     (re-matches acts line)   (mk-line line {:indent "  "       :act line :scene nil :direction nil :character :nil})
     (re-matches scenes line) (mk-line line {:indent "    "     :scene (first (clojure.string/split line #"\.")) :direction nil :character nil :line-number 0})
-    (or (and (re-matches names line) (re-matches not-names line)) (contains? hard-to-regex-directions line))
+    (or (and (re-matches names line) 
+             (re-matches not-names line) 
+             (not (re-matches inline-direction line))
+             (not (contains? not-actually-directions line)))
+        (contains? hard-to-regex-directions line))
                              (mk-line line {:indent "      "   :direction line})
-    (re-matches names line)  (mk-line line {:indent "        " :character line})
+    (and (re-matches names line) (not (re-matches not-names line)))
+                             (mk-line line {:indent "        " :character line})
     (= line "Ghost")         (mk-line line {:indent "        " :character "GHOST"})
     (blank? line)            (mk-line line {:indent "          "})
     :else                    (mk-line line {:indent "          " :line-count 1}) ))
