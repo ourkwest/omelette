@@ -109,7 +109,7 @@
 
 .text {
 	margin-left: 50px;
-	width: 700px;
+	width: 600px;
 	display: inline-block;
 	color: rgb(0, 100, 0);
 	font-weight: bold;
@@ -123,7 +123,7 @@
 .meta {
 	margin-left: 0px;
 	margin-right: 50px;
-	width: 700px;
+	width: 600px;
 	display: inline-block;
 }
 
