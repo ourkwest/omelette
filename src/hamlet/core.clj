@@ -95,28 +95,34 @@
 (def cut-text parsed-text)
 
 (def css "<style>
+
+html {
+	color: RGB(200, 200, 200);
+	background-color: black;
+	font-family: arial;
+}
+
 .ln {
 	width: 50px;
 	display: inline-block;
 }
 
 .line {
-	background-color: white;
 }
 .line:hover {
-	background-color: rgb(240, 240, 240);
+	background-color: rgb(40, 40, 40);
 }
 
 .text {
 	margin-left: 50px;
 	width: 600px;
 	display: inline-block;
-	color: rgb(0, 100, 0);
-	font-weight: bold;
+	color: rgb(100, 250, 100);
+//	font-weight: bold;
 }
 
 .cut {
-	color: rgb(250, 200, 200);
+	color: rgb(150, 0, 0);
 	font-weight: normal;
 }
 
@@ -129,6 +135,13 @@
 
 .note {
   width: 450px;
+}
+
+input {
+	color: RGB(0, 0, 250);
+}
+input:focus {
+	color: RGB(250, 0, 0);
 }
 
 </style>")
