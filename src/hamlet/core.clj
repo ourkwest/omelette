@@ -134,14 +134,16 @@ html {
 }
 
 .note {
-  width: 450px;
+	width: 450px;
 }
 
 input {
-	color: RGB(0, 0, 250);
+	background-color: rgb(0, 0, 0);
+	color: rgb(150, 150, 150);
 }
 input:focus {
-	color: RGB(250, 0, 0);
+	background-color: rgb(50, 50, 50);
+	color: rgb(250, 250, 250);
 }
 
 </style>")
