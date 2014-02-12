@@ -91,6 +91,42 @@
 (load-parsed)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; line-number, direction, character, text (in), text (cut), notes
+
+
+(defn line-to-csv [x] 
+  (join
+    ","
+    (concat [(if (:cut (:meta x)) 1 0) (:line-number x)]
+      (cond
+        (= (:direction x) (:text x)) [(:direction x) "" ""]
+        (= (:character x) (:text x)) ["" (:character x) ""]
+        :else                        ["" "" (:text x)])
+      [(:note (:meta x)) "\n"])))
+
+;;(println (apply str (map line-to-csv (take 35 parsed-text))))
+
+(defn collect-scenes [coll line]
+  (let [act (:act line)
+        scene (:scene line)]
+    (if (and act scene)
+      (conj coll [(.replace (str act "_" scene ".csv") " " "_") act scene])
+      coll)))
+
+(def scenes (reduce collect-scenes #{} parsed-text))
+
+(defn by-scene [act scene]
+  (fn [x]
+    (and (= act (:act x)) (= scene (:scene x)))))
+
+(defn scene-to-csv [[filename act scene]]
+  (spit filename (apply str (map line-to-csv (filter (by-scene act scene) parsed-text)))))
+
+;;(scene-to-csv ["delme.csv" "ACT I" "SCENE I"])
+(doall (map scene-to-csv scenes))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  
 (def cut-text parsed-text)
 
