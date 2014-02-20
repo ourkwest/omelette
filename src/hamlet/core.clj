@@ -95,6 +95,17 @@
 ;;; line-number, direction, character, text (in), text (cut), notes
 
 
+(def gdoc-indent "REPT(CHAR(160); 4)")
+(defn gdoc-formula [& args] (str \= (join \& args)))
+(defn gdoc-ref [column] (str "INDIRECT(\"R\"&ROW()&\"C" column "\")"))
+(def gdoc-text (gdoc-formula (gdoc-ref 3) gdoc-indent (gdoc-ref 4) gdoc-indent (gdoc-ref 5)))
+
+
+(defn csv-quote [x]
+  (if x
+    (str \" (.replaceAll x "\"" "\"\"") \")
+    ""))
+
 (defn line-to-csv [x] 
   (join
     ","
@@ -102,8 +113,8 @@
       (cond
         (= (:direction x) (:text x)) [(:direction x) "" ""]
         (= (:character x) (:text x)) ["" (:character x) ""]
-        :else                        ["" "" (:text x)])
-      [(:note (:meta x)) "\n"])))
+        :else                        ["" "" (csv-quote (:text x))])
+      [(csv-quote (:note (:meta x))) gdoc-text "\n"])))
 
 ;;(println (apply str (map line-to-csv (take 35 parsed-text))))
 
