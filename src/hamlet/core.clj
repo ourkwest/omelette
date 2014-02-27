@@ -183,6 +183,12 @@ html {
 	font-family: arial;
 }
 
+.editme {
+  border-left: 15px solid rgb(50, 50, 50);
+  padding-left: 5px;
+  margin-left: 5px;
+}
+
 .ln {
 	width: 50px;
 	display: inline-block;
@@ -200,6 +206,10 @@ html {
 	display: inline-block;
 	color: rgb(100, 250, 100);
 //	font-weight: bold;
+}
+
+.text.editme {
+	margin-left: 50px;
 }
 
 .cut {
@@ -324,10 +334,10 @@ function askFinalise(line_number) {
            (span {:id id :class (str line-type is-cut)} (:text line))
            (input {:value "cut" :type "submit" :onclick (str "cut(" id ");") } "") ; :tabindex id :onmouseover "this.focus();"
            (span {:id (str "final-" id)
-                  :class (str line-type is-cut is-tweaked)
+                  :class (str line-type is-cut is-tweaked " editme")
                   :onclick (str "askFinalise(" id ");")} (if (-> line :meta :cut) "" final))
            (span {:id (str "note-" id)
-                  :class "note"
+                  :class "note editme"
                   :onclick (str "askAnnotate(" id ");")} note)
 ;           (input {:id (str "type-" id) :class "type" :value type :type "text" :onblur (str "typify(" id ");") } "")
  ;          (input {:id (str "final-" id) :class "final" :value final :type "text" :onblur (str "finalise(" id ");") } "")
