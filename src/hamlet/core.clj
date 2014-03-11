@@ -270,14 +270,14 @@ function send(data) {
 }
 
 function cut(line_number) {
-	send(\"cut:\" + line_number);
+	send(\"cut|\" + line_number);
 	el = document.getElementById(line_number);
 	el.classList.toggle(\"cut\");
 }
 
 function annotate(line_number) {
 	el = document.getElementById(\"note-\" + line_number);
-  send(\"note:\" + line_number + \":\" + el.value);
+  send(\"note|\" + line_number + \"|\" + el.value);
 }
 
 function askAnnotate(line_number) {
@@ -285,14 +285,14 @@ function askAnnotate(line_number) {
   oldValue = el.firstChild.data;
   newValue = prompt(\"New note:\", oldValue);
   if (newValue && newValue != oldValue) {
-    send(\"note:\" + line_number + \":\" + newValue);
+    send(\"note|\" + line_number + \"|\" + newValue);
     el.firstChild.data = newValue;
   }
 }
 
 function finalise(line_number) {
 	el = document.getElementById(\"final-\" + line_number);
-  send(\"final:\" + line_number + \":\" + el.value);
+  send(\"final|\" + line_number + \"|\" + el.value);
 }
 
 function askFinalise(line_number) {
@@ -300,7 +300,7 @@ function askFinalise(line_number) {
   oldValue = el.firstChild.data;
   newValue = prompt(\"Final text:\", oldValue);
   if (newValue && newValue != oldValue) {
-    send(\"final:\" + line_number + \":\" + newValue);
+    send(\"final|\" + line_number + \"|\" + newValue);
     el.firstChild.data = newValue;
   }
 }
@@ -392,15 +392,15 @@ function askFinalise(line_number) {
 
 (defn handle [data]
   (cond
-    (.startsWith data "cut:")
-      (cut-line (read-string (last (split data #":"))))
-    (.startsWith data "note:")
-      (let [bits (split data #":")
+    (.startsWith data "cut|")
+      (cut-line (read-string (last (split data #"\|"))))
+    (.startsWith data "note|")
+      (let [bits (split data #"\|")
             id (read-string (nth bits 1))
             note (if (= (count bits) 3) (nth bits 2) "")]
         (note-line id note))
-    (.startsWith data "final:")
-      (let [bits (split data #":")
+    (.startsWith data "final|")
+      (let [bits (split data #"\|")
             id (read-string (nth bits 1))
             final (if (= (count bits) 3) (nth bits 2) "")]
         (final-line id final))
