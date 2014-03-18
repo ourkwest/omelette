@@ -349,9 +349,12 @@ function askFinalise(line_number) {
 
 (defn cut-data [line]
   (let [meta (:meta line)
-        cut? (:cut meta)
-        cut (not cut?)]
-    (assoc line :meta (assoc meta :cut cut))))
+        cut? (:cut meta)]
+    (if cut?
+      (assoc-in (assoc-in line [:meta :cut] false) [:meta :final] (:text line))
+      (assoc-in line [:meta :cut] true))
+    ;(assoc line :meta (assoc meta :cut cut))
+    ))
 
 (defn note-data [line note]
   (let [meta (:meta line)]
