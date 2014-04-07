@@ -117,7 +117,6 @@
 ;(def parsed-text (map finalise parsed-text)) ; only done once
 ;(write-out parsed-text)
 
-
 ;(println (take 30 parsed-text))
 
 
@@ -140,12 +139,21 @@
 (defn line-to-csv [x]
   (join
     ","
-    (concat [(if (:cut (:meta x)) 1 0) (:line-number x)]
-      (cond
-        (= (:direction x) (:text x)) [(:direction x) "" ""]
-        (= (:character x) (:text x)) ["" (:character x) ""]
-        :else                        ["" "" (csv-quote (:text x))])
-      [(csv-quote (:note (:meta x))) gdoc-text "\n"])))
+    [
+     (csv-quote (:text x))
+     (:type (:meta x))
+     (if (:cut (:meta x)) 1 0) 
+     (:character x)
+     (csv-quote (:final (:meta x)))
+     "\n"
+     ]))
+
+;    (concat [(if (:cut (:meta x)) 1 0) (:line-number x)]
+;      (cond
+;        (= (:direction x) (:text x)) [(:direction x) "" ""]
+;        (= (:character x) (:text x)) ["" (:character x) ""]
+;        :else                        ["" "" (csv-quote (:text x))])
+;      [(csv-quote (:note (:meta x))) gdoc-text "\n"])))
 
 ;;(println (apply str (map line-to-csv (take 35 parsed-text))))
 
@@ -156,17 +164,30 @@
       (conj coll [(.replace (str act "_" scene ".csv") " " "_") act scene])
       coll)))
 
+(defn collect-acts [coll line]
+  (let [act (:act line)]
+    (if act
+      (conj coll [(.replace (str act ".csv") " " "_") act])
+      coll)))
+
 (def scenes (reduce collect-scenes #{} parsed-text))
+(def acts (reduce collect-acts #{} parsed-text))
 
 (defn by-scene [act scene]
   (fn [x]
     (and (= act (:act x)) (= scene (:scene x)))))
 
+(defn by-act [act] (fn [x] (= act (:act x))))
+
 (defn scene-to-csv [[filename act scene]]
   (spit filename (apply str (map line-to-csv (filter (by-scene act scene) parsed-text)))))
 
+(defn act-to-csv [[filename act]]
+  (spit filename (apply str (map line-to-csv (filter (by-act act) parsed-text)))))
+
 ;;(scene-to-csv ["delme.csv" "ACT I" "SCENE I"])
 ;(doall (map scene-to-csv scenes))
+(doall (map act-to-csv acts))
 
 
 
