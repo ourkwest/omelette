@@ -282,11 +282,11 @@ function annotate(line_number) {
 
 function askAnnotate(line_number) {
   el = document.getElementById(\"note-\" + line_number);
-  oldValue = el.firstChild.data;
+  oldValue = (el.firstChild && el.firstChild.data) || \"\";
   newValue = prompt(\"New note:\", oldValue);
   if (newValue && newValue != oldValue) {
     send(\"note|\" + line_number + \"|\" + newValue);
-    el.firstChild.data = newValue;
+    el.innerHTML = newValue;
   }
 }
 
@@ -297,11 +297,11 @@ function finalise(line_number) {
 
 function askFinalise(line_number) {
   el = document.getElementById(\"final-\" + line_number);
-  oldValue = el.firstChild.data;
+  oldValue = (el.firstChild && el.firstChild.data) || \"\";
   newValue = prompt(\"Final text:\", oldValue);
   if (newValue && newValue != oldValue) {
     send(\"final|\" + line_number + \"|\" + newValue);
-    el.firstChild.data = newValue;
+    el.innerHTML = newValue;
   }
 }
 
