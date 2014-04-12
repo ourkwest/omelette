@@ -128,25 +128,35 @@
 (def gdoc-indent "REPT(CHAR(160); 4)")
 (defn gdoc-formula [& args] (str \= (join \& args)))
 (defn gdoc-ref [column] (str "INDIRECT(\"R\"&ROW()&\"C" column "\")"))
-(def gdoc-text (gdoc-formula (gdoc-ref 3) gdoc-indent (gdoc-ref 4) gdoc-indent (gdoc-ref 5)))
+(defn gdoc-text [ln] (gdoc-formula (str "B" ln) gdoc-indent (str "C" ln) gdoc-indent (str "E" ln)))
 
 
 (defn csv-quote [x]
-  (if x
-    (str \" (.replaceAll x "\"" "\"\"") \")
+  (if (and x (not= x :nil))
+    (try 
+      (str \" (.replaceAll x "\"" "\"\"") \")
+      (catch Exception e (do (println ">>>" x) (throw e))))
     ""))
 
-(defn line-to-csv [x]
-  (join
-    ","
-    [
-     (csv-quote (:text x))
-     (:type (:meta x))
-     (if (:cut (:meta x)) 1 0) 
-     (:character x)
-     (csv-quote (:final (:meta x)))
-     "\n"
-     ]))
+
+;text (original), direction, character (initial), character (each), speech, notes, ->final
+
+(defn line-to-csv [x ln]
+  (let [is-cut (:cut (:meta x))
+        type (:type (:meta x))
+        text (csv-quote (:text x))
+        note (csv-quote (:note (:meta x)))
+        character (if is-cut "" (csv-quote (:character x)))
+        final (if is-cut "" (csv-quote (or (:final (:meta x)) (:text x))))] 
+    (join "," [
+       text
+       (if (= type "D") final "")
+       (if (= type "C") character "")
+       (if (= type "T") character "")
+       (if (= type "T") final "")
+       (csv-quote (if (and (not= "" final) (not= final text)) "." " "))
+       note
+       (str (csv-quote (gdoc-text ln)) "\n")])))
 
 ;    (concat [(if (:cut (:meta x)) 1 0) (:line-number x)]
 ;      (cond
@@ -180,10 +190,13 @@
 (defn by-act [act] (fn [x] (= act (:act x))))
 
 (defn scene-to-csv [[filename act scene]]
-  (spit filename (apply str (map line-to-csv (filter (by-scene act scene) parsed-text)))))
+  (spit filename "Original Text,Direction,Character,Char,Text,,Note,All\n")
+  (spit filename (apply str (map line-to-csv (filter (by-scene act scene) parsed-text))) :append true))
 
 (defn act-to-csv [[filename act]]
-  (spit filename (apply str (map line-to-csv (filter (by-act act) parsed-text)))))
+  (do 
+    (spit filename "Original Text,Direction,Character,Char,Text,,Note,All\n")
+    (spit filename (apply str (map line-to-csv (filter (by-act act) parsed-text) (map (comp inc inc) (range)))) :append true)))
 
 ;;(scene-to-csv ["delme.csv" "ACT I" "SCENE I"])
 ;(doall (map scene-to-csv scenes))
